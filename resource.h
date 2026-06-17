@@ -1,0 +1,14 @@
+#pragma once
+
+#define ID_FILE_OPEN_LXP      40001
+#define ID_FILE_EXIT          40002
+#define ID_VIEW_GRID          40011
+#define ID_VIEW_AXES          40012
+#define ID_VIEW_WIREFRAME     40013
+#define ID_VIEW_FRAME_ALL     40014
+#define ID_VIEW_RESET_CAMERA  40015
+
+#define IDC_GLPASM_GLVIEW     50001
+#define IDC_GLPASM_LEFT_BAR   50002
+#define IDC_GLPASM_PART_LIST  50003
+#define IDC_GLPASM_STATUS     50004

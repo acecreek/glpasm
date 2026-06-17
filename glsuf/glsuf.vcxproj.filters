@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{96C199D0-5F3F-4F08-B07E-087E01E4C647}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{1FD5AE52-61C7-41C4-90CE-A50F7376B9C3}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="GLSufApp.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="GLView.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="MainFrame.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="SufModel.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="..\AppInit\AppInit.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="pch.cpp"><Filter>Source Files</Filter></ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="GLSufApp.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="GLView.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="MainFrame.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="SufModel.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="pch.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="resource.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="..\AppInit\AppInit.h"><Filter>Header Files</Filter></ClInclude>
+  </ItemGroup>
+</Project>
+
