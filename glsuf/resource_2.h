@@ -16,4 +16,3 @@
 #define ID_VIEW_GRID            40106
 #define ID_VIEW_FRAME_ALL       40107
 #define ID_VIEW_RESET_CAMERA    40108
-

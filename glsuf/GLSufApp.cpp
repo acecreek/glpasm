@@ -1,6 +1,7 @@
+﻿#//#pragma once
 #include "../pch.h"
 #include "GLSufApp.h"
-#include "../MainFrame.h"
+#include "MainFrame_2.h"
 
 CGLSufApp theApp;
 

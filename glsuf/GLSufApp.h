@@ -1,5 +1,5 @@
-#pragma once
-#include "..\AppInit\AppInit.h"
+﻿#pragma once
+#include "../AppInit/AppInit.h"
 
 class CGLSufApp : public CWinApp
 {

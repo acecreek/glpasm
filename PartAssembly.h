@@ -22,7 +22,11 @@ public:
     bool LoadLxP(const CString& path, CString& error);
     void Clear();
 
+    // Read-only access
     const std::vector<PartInstance>& Parts() const { return m_parts; }
+    // Mutable access for editors
+    std::vector<PartInstance>& Parts() { return m_parts; }
+
     const CString& SourcePath() const { return m_sourcePath; }
 
 private:

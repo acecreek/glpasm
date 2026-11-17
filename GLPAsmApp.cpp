@@ -1,6 +1,7 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "GLPAsmApp.h"
 #include "MainFrame.h"
+#include "AppInit/AppInit.h"
 
 CGLPAsmApp theApp;
 
@@ -8,6 +9,12 @@ BOOL CGLPAsmApp::InitInstance()
 {
     CWinApp::InitInstance();
     InitCommonControls();
+
+    // 起動時に初期設定ルーチンを呼び出し、設定情報を取得
+    AppConfig config = InitializeAppConfig();
+
+    // ※ 取得した config.GetPartsFullPath() や config.GetAtrFullPath() を
+    //    モデルの読み込み先フォルダの初期値としてお使いいただけます。
 
     auto* frame = new CMainFrame();
     if (!frame->Create(nullptr, _T("GL PartsAsm"), WS_OVERLAPPEDWINDOW,

@@ -1,3 +1,4 @@
+﻿//#pragma once
 #include "pch.h"
 #include "SufModel.h"
 
@@ -12,11 +13,23 @@ namespace
         return token == "{" || token == "}" || token == "(" || token == ")";
     }
 
+    std::string ToLowerCopy(const std::string& s)
+    {
+        std::string out(s);
+        for (auto& ch : out) ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+        return out;
+    }
+
+    bool EqualsI(const std::string& a, const char* b)
+    {
+        return ToLowerCopy(a) == ToLowerCopy(std::string(b));
+    }
+
     int FindToken(const std::vector<std::string>& tokens, const char* token)
     {
         for (size_t i = 0; i < tokens.size(); ++i)
         {
-            if (tokens[i] == token) return static_cast<int>(i);
+            if (EqualsI(tokens[i], token)) return static_cast<int>(i);
         }
         return -1;
     }
@@ -202,7 +215,7 @@ bool SufScene::LoadAtr(const CString& path, CString& error)
                 int out = 0;
                 for (size_t i = static_cast<size_t>(colIndex) + 1; i < tokens.size() && out < 3; ++i)
                 {
-                    if (tokens[i] == "rgb" || IsBrace(tokens[i])) continue;
+                    if (EqualsI(tokens[i], "rgb") || IsBrace(tokens[i])) continue;
                     currentAtr->col[static_cast<size_t>(out++)] = ParseFloat(tokens[i]);
                 }
                 continue;
@@ -231,7 +244,28 @@ bool SufScene::LoadAtr(const CString& path, CString& error)
                 for (size_t i = static_cast<size_t>(spcIndex) + 1; i < tokens.size() && out < 3; ++i)
                 {
                     if (IsBrace(tokens[i])) continue;
-                    currentAtr->spc[static_cast<size_t>(out++)] = ParseFloat(tokens[i]);
+                    // 範囲チェックを追加
+                    if (out >= 0 && out < static_cast<int>(currentAtr->spc.size())) {
+                        // out が負の可能性があるなら int/long 型を想定してチェック
+                        auto idxSigned = out++; // 元の増分意味を維持
+                        if (idxSigned >= 0) {
+                            size_t idx = static_cast<size_t>(idxSigned);
+                            if (idx < currentAtr->spc.size()) {
+                                currentAtr->spc[idx] = ParseFloat(tokens[i]);
+                            } else {
+                                 // 範囲外なら無視する（必要ならログや代替処理に変更）
+                            }
+                        } else {
+                            // 負なら無視（必要ならログ）
+                        }
+                        size_t idx = out++;
+                        if (idx < currentAtr->spc.size()) {
+                            currentAtr->spc[idx] = ParseFloat(tokens[i]);
+                        }
+                    } else {
+                        // 範囲外の場合の処理：無視する／ログ出力する／エラーにする 等
+                        // ここでは無視して次へ進む（必要ならエラーメッセージを設定してください）
+                    }
                 }
                 continue;
             }
@@ -255,13 +289,22 @@ bool SufScene::LoadAtr(const CString& path, CString& error)
     }
 }
 
+/**
+ * @brief 指定された名前の属性を検索します。
+ * @param name 検索する属性の名前。
+ * @return 見つかった場合は SufAttribute へのポインタ、見つからない場合は nullptr。
+ */
 const SufAttribute* SufScene::FindAttribute(const CString& name) const
 {
+    // m_attributes ベクトル内を検索し、名前が一致する SufAttribute を見つける
     for (const auto& atr : m_attributes)
     {
-        if (atr.name.Compare(name) == 0) return &atr;
+        if (atr.name == name)
+        {
+            return &atr; // 見つかった属性へのポインタを返す
+        }
     }
-    return nullptr;
+    return nullptr; // 見つからなかった場合は nullptr を返す
 }
 
 SufBounds SufScene::Bounds() const

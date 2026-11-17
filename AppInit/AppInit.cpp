@@ -1,6 +1,7 @@
-﻿#include "..\pch.h"
+﻿#include "../pch.h"
 #include "AppInit.h"
 #include <afxdlgs.h> // CFolderPickerDialog のため
+#include <format>
 
 // ソース内の文字リテラルをUTF-8で解釈させる（MSVC向け）
 #pragma execution_character_set("utf-8")
@@ -41,23 +42,36 @@ static CString GetAppName() {
     return appName;
 }
 
-// デフォルト設定の .ini ファイルを新規作成（ユーザー指定の形式、6行+改行で7行）
+// デフォルト設定の .ini ファイルを新規作成（ユーザー指定の形式）
 static void CreateDefaultIni(const CString& iniPath, const CString& appName) {
     CStdioFile file;
     if (file.Open(iniPath, CFile::modeCreate | CFile::modeWrite | CFile::typeText)) {
-        CString content;
-        // ユーザー指定のデフォルト内容 (6行+改行で7行)
-        content.Format(
-            _T("// %s.ini\n")
-            _T("// インストール先がデフォルト以外の人はDOGACGADir=行を書き換える\n")
-            _T("DOGACGADir=C:\\Program Files\\DOGACGA\n")
-            _T("PartsDir=\\common\\parts\n")
-            _T("AtrDir=\\common\\atr\n")
-            _T("AtrFile=\\common\\atr\\genie.atr\n"),
-            appName
-        );
-        file.WriteString(content);
+        // 新仕様: ini にはコメント行と DOGACGADir 行のみを出力する
+        CStringArray lines;
+        CString first;
+        first.Format(_T("// %s.ini"), static_cast<LPCTSTR>(appName));
+//        first.Format(_T("// %s.ini"), appName.GetString());
+//        #include <format>
+//        first = CString(std::format(L"// {}.ini", std::wstring(appName)));
+
+        lines.Add(first);
+        lines.Add(_T(""));
+        lines.Add(_T("DOGACGADir=C:\\Program Files\\DOGACGA"));
+        lines.Add(_T(""));
+
+        for (INT_PTR i = 0; i < lines.GetCount(); ++i) {
+            file.WriteString(lines[i] + _T("\n"));
+        }
         file.Close();
+
+        CString msg;
+        msg.Format(_T("Created default ini:\r\n%s"), static_cast<LPCTSTR>(iniPath));
+        ::MessageBox(nullptr, msg, _T("glsuf.ini created"), MB_OK | MB_ICONINFORMATION);
+    }
+    else {
+        CString msg;
+        msg.Format(_T("Failed to create ini file:\r\n%s\r\nCheck write permissions."), static_cast<LPCTSTR>(iniPath));
+        ::MessageBox(nullptr, msg, _T("glsuf.ini error"), MB_OK | MB_ICONERROR);
     }
 }
 
@@ -83,14 +97,9 @@ static bool LoadIni(const CString& iniPath, AppConfig& config) {
             key.Trim();
             val.Trim();
 
+            // 新設計: ini からは DOGACGADir のみを読み取る
             if (key.CompareNoCase(_T("DOGACGADir")) == 0) {
                 config.dogaCgaDir = val;
-            } else if (key.CompareNoCase(_T("PartsDir")) == 0) {
-                config.partsDir = val;
-            } else if (key.CompareNoCase(_T("AtrDir")) == 0) {
-                config.atrDir = val;
-            } else if (key.CompareNoCase(_T("AtrFile")) == 0) {
-                config.atrFile = val;
             }
         }
     }
@@ -107,12 +116,14 @@ static void UpdateDogaCgaDirInIni(const CString& iniPath, const CString& newDir)
 
     CStringArray lines;
     CString line;
+    bool replaced = false;
     while (file.ReadString(line)) {
         CString trimmed = line;
         trimmed.Trim();
         // DOGACGADir= で始まる行を見つけたら置換
         if (trimmed.Left(11).CompareNoCase(_T("DOGACGADir=")) == 0) {
             line = _T("DOGACGADir=") + newDir;
+            replaced = true;
         }
         lines.Add(line);
     }
@@ -125,6 +136,12 @@ static void UpdateDogaCgaDirInIni(const CString& iniPath, const CString& newDir)
         }
         file.Close();
     }
+
+    // DOGACGADir 行が存在しなければ新規作成
+    if (!replaced) {
+    	CreateDefaultIni(iniPath, GetAppName());
+    }
+
 }
 
 // フォルダ選択ダイアログを表示してインストール先を指定してもらう
@@ -155,12 +172,14 @@ AppConfig InitializeAppConfig() {
 
     // 2. iniファイルを読み込む
     if (!LoadIni(iniPath, config)) {
-        // 万が一読み込み失敗時のためのフォールバック
+        // 読み込み失敗時は DOGACGADir の既定値のみ設定
         config.dogaCgaDir = _T("C:\\Program Files\\DOGACGA");
-        config.partsDir = _T("\\common\\parts");
-        config.atrDir = _T("\\common\\atr");
-        config.atrFile = _T("\\common\\atr\\genie.atr");
     }
+
+    // 固定文字列は ini に書き込まず、常に初期化時に設定する
+    config.partsDir = _T("\\common\\parts");
+    config.atrDir = _T("\\common\\atr");
+    config.atrFile = _T("\\common\\atr\\genie.atr");
 
     // 3. インストール先フォルダが見つからない場合は見つかるかキャンセルされるまでループ
     while (!FolderExists(config.dogaCgaDir)) {

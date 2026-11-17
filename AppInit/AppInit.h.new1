@@ -1,0 +1,30 @@
+﻿#pragma once
+
+#include <string>
+#include <cstdint>
+
+namespace doga_l3 { // 名前衝突回避のため名前空間を付与
+
+// アプリケーションの設定情報を保持する構造体
+// AppConfig の定義
+struct AppConfig {
+    // 必要なメンバをここに記述（例）
+    std::string dogaCgaDir;
+    std::string partsDir;
+    std::string atrDir;
+    std::string atrFile;
+
+    // 結合した最終パスを取得するヘルパー
+    std::string GetPartsFullPath() const { return dogaCgaDir + partsDir; }
+    std::string GetAtrFullPath() const { return dogaCgaDir + atrDir; }
+    std::string GetAtrFileFullPath() const { return dogaCgaDir + atrFile; }
+
+    AppConfig() = default;
+    // 必要ならコンストラクタやメソッドを追加
+};
+
+// アプリ初期設定ルーチン
+// 必要に応じてiniファイルを生成・読込し、フォルダがない場合は選択ダイアログを表示してiniを書き換えます
+AppConfig InitializeAppConfig();
+
+} // namespace doga_l3

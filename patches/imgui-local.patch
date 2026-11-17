@@ -1,0 +1,73 @@
+diff --git a/backends/imgui_impl_opengl3.cpp b/backends/imgui_impl_opengl3.cpp
+index 1f96c6fe8..864955590 100644
+--- a/backends/imgui_impl_opengl3.cpp
++++ b/backends/imgui_impl_opengl3.cpp
+@@ -1,4 +1,4 @@
+-// dear imgui: Renderer Backend for modern OpenGL with shaders / programmatic pipeline
++﻿// dear imgui: Renderer Backend for modern OpenGL with shaders / programmatic pipeline
+ // - Desktop GL: 2.x 3.x 4.x
+ // - Embedded GL: ES 2.0 (WebGL 1.0), ES 3.0 (WebGL 2.0)
+ // This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
+@@ -126,7 +126,7 @@
+ #define _CRT_SECURE_NO_WARNINGS
+ #endif
+ 
+-#include "imgui.h"
++#include "../imgui.h"
+ #ifndef IMGUI_DISABLE
+ #include "imgui_impl_opengl3.h"
+ #include <stdio.h>
+@@ -798,7 +798,13 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
+ 
+     // Parse GLSL version string
+     int glsl_version = 130;
+-    sscanf(bd->GlslVersionString, "#version %d", &glsl_version);
++    //sscanf(bd->GlslVersionString, "#version %d", &glsl_version);
++    // 解析結果を確認して、失敗時は既定値を使う
++    int _sscanf_res = ::sscanf(bd->GlslVersionString, "#version %d", &glsl_version);
++    if (_sscanf_res != 1) {
++        // 解析に失敗した場合は既定値(0)にリセット
++        glsl_version = 0;
++    }
+ 
+     const GLchar* vertex_shader_glsl_120 =
+         "uniform mat4 ProjMtx;\n"
+diff --git a/backends/imgui_impl_opengl3.h b/backends/imgui_impl_opengl3.h
+index a93804213..f1fb43b0b 100644
+--- a/backends/imgui_impl_opengl3.h
++++ b/backends/imgui_impl_opengl3.h
+@@ -27,7 +27,7 @@
+ //  Only override if your GL version doesn't handle this GLSL version. See GLSL version table at the top of imgui_impl_opengl3.cpp.
+ 
+ #pragma once
+-#include "imgui.h"      // IMGUI_IMPL_API
++#include "..\imgui.h"      // IMGUI_IMPL_API
+ #ifndef IMGUI_DISABLE
+ 
+ // Follow "Getting Started" link and check examples/ folder to learn about using backends!
+diff --git a/backends/imgui_impl_win32.cpp b/backends/imgui_impl_win32.cpp
+index 787329bf6..5862ad084 100644
+--- a/backends/imgui_impl_win32.cpp
++++ b/backends/imgui_impl_win32.cpp
+@@ -83,7 +83,7 @@
+ //  2017-10-23: Inputs: Using Win32 ::SetCapture/::GetCapture() to retrieve mouse positions outside the client area when dragging.
+ //  2016-11-12: Inputs: Only call Win32 ::SetCursor(nullptr) when io.MouseDrawCursor is set.
+ 
+-#include "imgui.h"
++#include "../imgui.h"
+ #ifndef IMGUI_DISABLE
+ #include "imgui_impl_win32.h"
+ #ifndef WIN32_LEAN_AND_MEAN
+diff --git a/backends/imgui_impl_win32.h b/backends/imgui_impl_win32.h
+index d2a960059..0ad01e7e9 100644
+--- a/backends/imgui_impl_win32.h
++++ b/backends/imgui_impl_win32.h
+@@ -17,7 +17,7 @@
+ // - Introduction, links and more at the top of imgui.cpp
+ 
+ #pragma once
+-#include "imgui.h"      // IMGUI_IMPL_API
++#include "..\imgui.h"      // IMGUI_IMPL_API
+ #ifndef IMGUI_DISABLE
+ 
+ // Follow "Getting Started" link and check examples/ folder to learn about using backends!

@@ -11,21 +11,70 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="GLSufApp.cpp"><Filter>Source Files</Filter></ClCompile>
-    <ClCompile Include="GLView.cpp"><Filter>Source Files</Filter></ClCompile>
-    <ClCompile Include="MainFrame.cpp"><Filter>Source Files</Filter></ClCompile>
-    <ClCompile Include="SufModel.cpp"><Filter>Source Files</Filter></ClCompile>
-    <ClCompile Include="..\AppInit\AppInit.cpp"><Filter>Source Files</Filter></ClCompile>
-    <ClCompile Include="pch.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="GLSufApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SufModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\AppInit\AppInit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MainFrame_2.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\\pch.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GLView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\backends\imgui_impl_win32.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\backends\imgui_impl_opengl3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_draw.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_tables.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="GLSufApp.h"><Filter>Header Files</Filter></ClInclude>
-    <ClInclude Include="GLView.h"><Filter>Header Files</Filter></ClInclude>
-    <ClInclude Include="MainFrame.h"><Filter>Header Files</Filter></ClInclude>
-    <ClInclude Include="SufModel.h"><Filter>Header Files</Filter></ClInclude>
-    <ClInclude Include="pch.h"><Filter>Header Files</Filter></ClInclude>
-    <ClInclude Include="resource.h"><Filter>Header Files</Filter></ClInclude>
-    <ClInclude Include="..\AppInit\AppInit.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="GLSufApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\AppInit\AppInit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MainFrame_2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource_2.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SufModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GLView.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\\pch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\third_party\imgui\imgui.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="glsuf.vcxproj.new" />
   </ItemGroup>
 </Project>
-
