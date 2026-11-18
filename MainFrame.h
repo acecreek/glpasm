@@ -2,11 +2,12 @@
 #include "glsuf/GLView.hpp"
 #include "PartAssembly.h"
 #include "NumericEdit.h"
+#include "AppInit/AppInit.h"
 
 class CMainFrame : public CFrameWnd
 {
 public:
-    CMainFrame();
+    explicit CMainFrame(const AppConfig& config);
 
 protected:
     afx_msg int OnCreate(LPCREATESTRUCT cs);
@@ -24,7 +25,6 @@ protected:
     afx_msg void OnPartSelectionChanged();
     afx_msg void OnPartsAdd();
     afx_msg void OnPartsAddFromFile();
-    afx_msg LRESULT OnImGuiSelect(WPARAM wp, LPARAM lp);
     afx_msg void OnSelectedValueChanged(UINT id);
     DECLARE_MESSAGE_MAP()
 
@@ -34,6 +34,8 @@ private:
     void RefreshPartList();
     void SetStatusText(const CString& text);
 
+    AppConfig m_config;
+    bool m_updatingSelection = false;
     CGLView m_view;
     CStatic m_leftBar;
     CListBox m_partList;

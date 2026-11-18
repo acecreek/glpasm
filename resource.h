@@ -20,9 +20,6 @@
 #define ID_PARTS_ADD              40021
 #define ID_PARTS_ADD_FROM_FILE    40022
 
-// Messages
-#define WM_IMGUI_SELECT (WM_APP + 0x65)
-
 // Numeric edit controls for selected part (positions)
 #define IDC_PART_POS_X 51001
 #define IDC_PART_POS_Y 51002

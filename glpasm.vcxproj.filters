@@ -25,12 +25,6 @@
     <ClCompile Include="glsuf\SufModel.cpp" />
     <ClCompile Include="NumericEdit.cpp" />
     <ClCompile Include="glsuf\GLView.cpp" />
-    <ClCompile Include="third_party\imgui\imgui.cpp" />
-    <ClCompile Include="third_party\imgui\imgui_draw.cpp" />
-    <ClCompile Include="third_party\imgui\imgui_tables.cpp" />
-    <ClCompile Include="third_party\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="third_party\imgui\backends\imgui_impl_win32.cpp" />
-    <ClCompile Include="third_party\imgui\backends\imgui_impl_opengl3.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GLPAsmApp.h">
@@ -56,6 +50,5 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="glpasm\third_party\imgui\README.md" />
   </ItemGroup>
 </Project>

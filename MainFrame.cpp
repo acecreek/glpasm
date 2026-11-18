@@ -16,24 +16,11 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
     ON_COMMAND(ID_PARTS_ADD_FROM_FILE, &CMainFrame::OnPartsAddFromFile)
     ON_LBN_SELCHANGE(IDC_GLPASM_PART_LIST, &CMainFrame::OnPartSelectionChanged)
     ON_CONTROL_RANGE(EN_CHANGE, IDC_PART_POS_X, IDC_PART_SCL_Z, OnSelectedValueChanged)
-    ON_MESSAGE(WM_IMGUI_SELECT, &CMainFrame::OnImGuiSelect)
 END_MESSAGE_MAP()
 
-CMainFrame::CMainFrame()
-    : m_assembly(std::make_shared<PartAssembly>())
+CMainFrame::CMainFrame(const AppConfig& config)
+    : m_config(config), m_assembly(std::make_shared<PartAssembly>())
 {
-}
-
-LRESULT CMainFrame::OnImGuiSelect(WPARAM wp, LPARAM lp)
-{
-    const int idx = static_cast<int>(wp);
-    if (!m_assembly) return 0;
-    if (idx < 0 || idx >= static_cast<int>(m_assembly->Parts().size())) return 0;
-    m_partList.SetCurSel(idx);
-    OnPartSelectionChanged();
-    // ensure visible
-    m_partList.SetTopIndex(idx);
-    return 0;
 }
 
 int CMainFrame::OnCreate(LPCREATESTRUCT cs)
@@ -68,6 +55,7 @@ int CMainFrame::OnCreate(LPCREATESTRUCT cs)
     m_sclEdits[2].Create(edtStyle, CRect(0,0,1,1), this, IDC_PART_SCL_Z);
 
     if (!m_view.CreateView(this, IDC_GLPASM_GLVIEW)) return -1;
+    m_assembly->SetResourcePaths(m_config.GetPartsFullPath(), m_config.GetAtrFileFullPath());
     m_view.SetAssembly(m_assembly);
 
     SetStatusText(_T("Open an L2P/L3P file to populate the assembly."));
@@ -91,6 +79,7 @@ void CMainFrame::OnFileOpen()
 
     CString error;
     auto loaded = std::make_shared<PartAssembly>();
+    loaded->SetResourcePaths(m_config.GetPartsFullPath(), m_config.GetAtrFileFullPath());
     if (!loaded->LoadLxP(dlg.GetPathName(), error))
     {
         AfxMessageBox(error, MB_ICONERROR);
@@ -161,6 +150,8 @@ void CMainFrame::OnPartSelectionChanged()
         part.move.x, part.move.y, part.move.z,
         part.rotateDeg.x, part.rotateDeg.y, part.rotateDeg.z,
         part.scale.x, part.scale.y, part.scale.z);
+    // 表示更新で発生する変更通知から、パーツの値を保護する。
+    m_updatingSelection = true;
     // Populate numeric edits
     m_posEdits[0].SetValue(part.move.x);
     m_posEdits[1].SetValue(part.move.y);
@@ -171,10 +162,12 @@ void CMainFrame::OnPartSelectionChanged()
     m_sclEdits[0].SetValue(part.scale.x);
     m_sclEdits[1].SetValue(part.scale.y);
     m_sclEdits[2].SetValue(part.scale.z);
+    m_updatingSelection = false;
 }
 
 void CMainFrame::OnSelectedValueChanged(UINT id)
 {
+    if (m_updatingSelection) return;
     const int sel = m_partList.GetCurSel();
     if (!m_assembly || sel < 0 || sel >= static_cast<int>(m_assembly->Parts().size())) return;
 
@@ -208,32 +201,45 @@ void CMainFrame::OnSelectedValueChanged(UINT id)
 
 void CMainFrame::BuildMenu()
 {
-    auto* menu = new CMenu();
-    auto* file = new CMenu();
-    auto* view = new CMenu();
-    auto* parts = new CMenu();
-    menu->CreateMenu();
-    file->CreatePopupMenu();
-    view->CreatePopupMenu();
-    parts->CreatePopupMenu();
+    constexpr auto openAssemblyLabel = L"L2P/L3Pを開く(&O)...";
+    constexpr auto exitLabel = L"終了(&X)";
+    constexpr auto gridLabel = L"グリッドの表示切替(&G)";
+    constexpr auto axesLabel = L"座標軸の表示切替(&A)";
+    constexpr auto wireframeLabel = L"ワイヤーフレームの表示切替(&W)";
+    constexpr auto frameAllLabel = L"全パーツを表示範囲に収める(&F)";
+    constexpr auto resetCameraLabel = L"カメラを初期化(&R)";
+    constexpr auto fileLabel = L"ファイル(&F)";
+    constexpr auto viewLabel = L"表示(&V)";
+    constexpr auto addPartLabel = L"パーツを追加";
+    constexpr auto addFromFileLabel = L"ファイルからパーツを追加...";
+    constexpr auto partsLabel = L"パーツ";
+    CMenu menu;
+    CMenu file;
+    CMenu view;
+    CMenu parts;
+    menu.CreateMenu();
+    file.CreatePopupMenu();
+    view.CreatePopupMenu();
+    parts.CreatePopupMenu();
 
-    file->AppendMenu(MF_STRING, ID_FILE_OPEN_LXP, _T("&Open L2P/L3P..."));
-    file->AppendMenu(MF_SEPARATOR);
-    file->AppendMenu(MF_STRING, ID_FILE_EXIT, _T("E&xit"));
+    file.AppendMenu(MF_STRING, ID_FILE_OPEN_LXP, openAssemblyLabel);
+    file.AppendMenu(MF_SEPARATOR);
+    file.AppendMenu(MF_STRING, ID_FILE_EXIT, exitLabel);
 
-    view->AppendMenu(MF_STRING, ID_VIEW_GRID, _T("Toggle &Grid"));
-    view->AppendMenu(MF_STRING, ID_VIEW_AXES, _T("Toggle A&xes"));
-    view->AppendMenu(MF_STRING, ID_VIEW_WIREFRAME, _T("Toggle &Wireframe"));
-    view->AppendMenu(MF_SEPARATOR);
-    view->AppendMenu(MF_STRING, ID_VIEW_FRAME_ALL, _T("&Frame All"));
-    view->AppendMenu(MF_STRING, ID_VIEW_RESET_CAMERA, _T("&Reset Camera"));
+    view.AppendMenu(MF_STRING, ID_VIEW_GRID, gridLabel);
+    view.AppendMenu(MF_STRING, ID_VIEW_AXES, axesLabel);
+    view.AppendMenu(MF_STRING, ID_VIEW_WIREFRAME, wireframeLabel);
+    view.AppendMenu(MF_SEPARATOR);
+    view.AppendMenu(MF_STRING, ID_VIEW_FRAME_ALL, frameAllLabel);
+    view.AppendMenu(MF_STRING, ID_VIEW_RESET_CAMERA, resetCameraLabel);
 
-    menu->AppendMenu(MF_POPUP, reinterpret_cast<UINT_PTR>(file->Detach()), _T("&File"));
-    menu->AppendMenu(MF_POPUP, reinterpret_cast<UINT_PTR>(view->Detach()), _T("&View"));
-    parts->AppendMenu(MF_STRING, ID_PARTS_ADD, _T("パーツ追加"));
-    parts->AppendMenu(MF_STRING, ID_PARTS_ADD_FROM_FILE, _T("ファイルからパーツ追加..."));
-    menu->AppendMenu(MF_POPUP, reinterpret_cast<UINT_PTR>(parts->Detach()), _T("パーツ"));
-    SetMenu(menu);
+    menu.AppendMenu(MF_POPUP, reinterpret_cast<UINT_PTR>(file.Detach()), fileLabel);
+    menu.AppendMenu(MF_POPUP, reinterpret_cast<UINT_PTR>(view.Detach()), viewLabel);
+    parts.AppendMenu(MF_STRING, ID_PARTS_ADD, addPartLabel);
+    parts.AppendMenu(MF_STRING, ID_PARTS_ADD_FROM_FILE, addFromFileLabel);
+    menu.AppendMenu(MF_POPUP, reinterpret_cast<UINT_PTR>(parts.Detach()), partsLabel);
+    SetMenu(&menu);
+    menu.Detach();
 }
 
 void CMainFrame::LayoutChildren(int cx, int cy)
@@ -318,6 +324,13 @@ void CMainFrame::OnPartsAddFromFile()
     inst.rotateDeg = { 0.0f, 0.0f, 0.0f };
     inst.scale = { 1.0f, 1.0f, 1.0f };
 
+    m_assembly->SetResourcePaths(m_config.GetPartsFullPath(), m_config.GetAtrFileFullPath());
+    CString error;
+    if (!m_assembly->LoadPart(inst, CString{}, error))
+    {
+        AfxMessageBox(error, MB_ICONERROR);
+        return;
+    }
     m_assembly->Parts().push_back(inst);
     m_view.SetAssembly(m_assembly);
     RefreshPartList();

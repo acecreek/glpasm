@@ -25,9 +25,9 @@ public:
 	void SetDrawPolygon(bool enabled);
 	void SetDrawLine(bool enabled);
 	void SetDrawPoint(bool enabled);
-//	void DrawPolygons();
-//	void DrawLines();
-//	void DrawPoints();
+//	void DrawPolygons(const SufScene& scene);
+//	void DrawLines(const SufScene& scene);
+//	void DrawPoints(const SufScene& scene);
 	void ToggleGrid();
 	void ToggleAxes();
 	void ToggleWireframe();
@@ -51,8 +51,6 @@ protected:
 	afx_msg BOOL OnMouseWheel(UINT flags, short delta, CPoint pt);
 	afx_msg void OnLButtonDblClk(UINT flags, CPoint pt);
 	afx_msg void OnKeyDown(UINT ch, UINT rep, UINT flags);
-	// Forward Win32 messages to ImGui
-	LRESULT WindowProc(UINT message, WPARAM wParam, LPARAM lParam) override;
 	DECLARE_MESSAGE_MAP()
 
 private:
@@ -63,18 +61,17 @@ private:
 	void RenderScene();
 	void ApplyCamera();
 //#ifndef __GLPASM__
-	void ApplyAttribute(const SufPrimitive& prim);
-	void DrawPolygons();
-	void DrawLines();
-	void DrawPoints();
+	void ApplyAttribute(const SufScene& scene, const SufPrimitive& prim);
+	void DrawPolygons(const SufScene& scene);
+	void DrawLines(const SufScene& scene);
+	void DrawPoints(const SufScene& scene);
 //#endif
 	void DrawGrid(float half, float step);
 	void DrawAxes(float length);
-	void DrawPart(const PartInstance& part, int index);
+	void DrawPart(const PartInstance& part);
 	void DrawUnitBox(bool selected);
 	void DrawOverlay(HDC hdc);
 //#ifndef __GLPASM__
-	void DrawImGui();
 	static std::array<float, 3> PolygonNormal(const SufPrimitive& prim);
 //#endif
 

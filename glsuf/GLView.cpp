@@ -1,18 +1,8 @@
 ﻿#include "pch.h"
 #include "GLView.hpp"
 #include "SufModel.h"
+#include <numbers>
 #include "../resource.h"
-
-// Dear ImGui
-#include "../third_party/imgui/imgui.h"
-#include "../third_party/imgui/backends/imgui_impl_opengl3.h"
-#include "../third_party/imgui/backends/imgui_impl_win32.h"
-// imgui_impl_win32.h intentionally leaves the WndProc handler declaration inside a disabled block.
-// Forward-declare it here so we can call it from WindowProc without a missing symbol error.
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-#include "SufModel.h"
-
-// WM_IMGUI_SELECT は resource.h で定義済み
 
 BEGIN_MESSAGE_MAP(CGLView, CWnd)
 	ON_WM_CREATE()
@@ -49,14 +39,13 @@ BOOL CGLView::CreateView(CWnd* parent, UINT id)
 void CGLView::SetScene(const std::shared_ptr<SufScene>& scene)
 {
 	m_scene = scene;
-	FrameAll();
+	Invalidate(FALSE);
 }
 
 void CGLView::SetAssembly(const std::shared_ptr<PartAssembly>& assembly)
 {
 	m_assembly = assembly;
 	m_selectedPart = -1;
-	FrameAll();
 	Invalidate(FALSE);
 }
 
@@ -92,28 +81,24 @@ void CGLView::ToggleAxes()
 
 void CGLView::FrameAll()
 {
-	m_center = { 0.0f, 0.0f, 0.0f };
-	float radius = 400.0f;
-
-	if (m_scene)
-	{
-		const auto bounds = m_scene->Bounds();
-		if (bounds.valid)
-		{
-			m_center = {
-				(bounds.min[0] + bounds.max[0]) * 0.5f,
-				(bounds.min[1] + bounds.max[1]) * 0.5f,
-				(bounds.min[2] + bounds.max[2]) * 0.5f
-			};
-			const float sx = bounds.max[0] - bounds.min[0];
-			const float sy = bounds.max[1] - bounds.min[1];
-			const float sz = bounds.max[2] - bounds.min[2];
-			radius = (std::max)(100.0f, std::sqrt(sx * sx + sy * sy + sz * sz) * 0.75f);
-		}
-	}
-
-	m_distance = -((std::max)(300.0f, radius * 2.2f));
-	Invalidate(FALSE);
+    constexpr auto half = 0.5f, fieldOfView = 30.0f, halfTurn = 180.0f;
+    constexpr auto margin = 1.1f, minimumRadius = 1.0f, minimumDistance = 20.0f;
+    constexpr auto minimumSize = 1;
+    constexpr size_t x = 0, y = 1, z = 2;
+    const auto bounds = m_assembly ? m_assembly->Bounds() : (m_scene ? m_scene->Bounds() : SufBounds{});
+    if (!bounds.valid) return;
+    m_center = { (bounds.min[x] + bounds.max[x]) * half,
+        (bounds.min[y] + bounds.max[y]) * half, (bounds.min[z] + bounds.max[z]) * half };
+    const auto sx = bounds.max[x] - bounds.min[x], sy = bounds.max[y] - bounds.min[y], sz = bounds.max[z] - bounds.min[z];
+    const auto radius = (std::max)(minimumRadius, std::sqrt(sx * sx + sy * sy + sz * sz) * half);
+    CRect rc;
+    GetClientRect(&rc);
+    const auto aspect = static_cast<float>((std::max)(minimumSize, rc.Width())) /
+        static_cast<float>((std::max)(minimumSize, rc.Height()));
+    const auto verticalAngle = fieldOfView * half * std::numbers::pi_v<float> / halfTurn;
+    const auto horizontalAngle = std::atan(std::tan(verticalAngle) * aspect);
+    m_distance = -(std::max)(minimumDistance, radius * margin / std::sin((std::min)(verticalAngle, horizontalAngle)));
+    Invalidate(FALSE);
 }
 
 void CGLView::ResetCamera()
@@ -144,8 +129,6 @@ void CGLView::OnPaint()
 	if (!m_ready || !wglMakeCurrent(m_hDC, m_hRC)) return;
 
 	RenderScene();
-	// Draw ImGui UI into the current GL context
-	DrawImGui();
 	::SwapBuffers(m_hDC);
 	DrawOverlay(dc.GetSafeHdc());
 }
@@ -249,27 +232,11 @@ bool CGLView::InitGL()
 	glEnable(GL_NORMALIZE);
 	m_ready = true;
 
-	// Initialize ImGui
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	ImGui::StyleColorsDark();
-	ImGui_ImplWin32_Init(m_hWnd);
-	ImGui_ImplOpenGL3_Init("#version 130");
-
 	return true;
 }
 
 void CGLView::DestroyGL()
 {
-	// Shutdown ImGui
-	if (ImGui::GetCurrentContext())
-	{
-		ImGui_ImplOpenGL3_Shutdown();
-		ImGui_ImplWin32_Shutdown();
-		ImGui::DestroyContext();
-	}
-
 	if (m_hRC)
 	{
 		wglMakeCurrent(nullptr, nullptr);
@@ -286,14 +253,7 @@ void CGLView::DestroyGL()
 
 void CGLView::RenderScene()
 {
-	// Placeholder patch: no-op change to ensure context matches for patch application.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// Ensure grid and axes are drawn immediately after clearing so overlay
-	// behavior and hit-testing remain consistent even when later rendering
-	// or lighting state changes.
-	if (m_showGrid) DrawGrid(1000.0f, 100.0f);
-	if (m_showAxes) DrawAxes(1800.0f);
 
 	CRect rc;
 	GetClientRect(&rc);
@@ -302,7 +262,9 @@ void CGLView::RenderScene()
 
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(30.0, aspect, 1.0, 20000.0);
+	constexpr auto fieldOfView = 30.0, nearPlane = 1.0, minimumFarPlane = 20000.0, farMultiplier = 4.0;
+    gluPerspective(fieldOfView, aspect, nearPlane,
+        (std::max)(minimumFarPlane, std::abs(static_cast<double>(m_distance)) * farMultiplier));
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -327,9 +289,16 @@ void CGLView::RenderScene()
 	glEnable(GL_LIGHT0);
 	glShadeModel(GL_SMOOTH);
 
-	if (m_drawPolygon) DrawPolygons();
-	if (m_drawLine) DrawLines();
-	if (m_drawPoint) DrawPoints();
+    if (m_assembly)
+    {
+        for (const auto& part : m_assembly->Parts()) DrawPart(part);
+    }
+    else if (m_scene)
+    {
+        if (m_drawPolygon && !m_wireframe) DrawPolygons(*m_scene);
+        if (m_drawLine || m_wireframe) DrawLines(*m_scene);
+        if (m_drawPoint) DrawPoints(*m_scene);
+    }
 
 	glDisable(GL_LIGHTING);
 	glFinish();
@@ -345,14 +314,18 @@ void CGLView::ApplyCamera()
 	glTranslatef(-m_center[0], -m_center[1], -m_center[2]);
 }
 
-void CGLView::ApplyAttribute(const SufPrimitive& prim)
+void CGLView::ApplyAttribute(const SufScene& scene, const SufPrimitive& prim)
 {
-	const SufAttribute* atr = m_scene ? m_scene->FindAttribute(prim.atrName) : nullptr;
+	const SufAttribute* atr = scene.FindAttribute(prim.atrName);
 	if (!atr)
 	{
-		const GLfloat color[] = { 0.95f, 0.95f, 0.95f, 1.0f };
-		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, color);
-		glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 64.0f);
+		constexpr std::array<GLfloat, 4> color{ 0.95f, 0.95f, 0.95f, 1.0f };
+        constexpr std::array<GLfloat, 4> noEmission{ 0.0f, 0.0f, 0.0f, 1.0f };
+        constexpr auto defaultShininess = 64.0f;
+        glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, noEmission.data());
+        glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, noEmission.data());
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, color.data());
+		glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, defaultShininess);
 		return;
 	}
 
@@ -394,24 +367,23 @@ void CGLView::ApplyAttribute(const SufPrimitive& prim)
 	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 128.0f * atr->spc[1]);
 }
 
-void CGLView::DrawPolygons()
+void CGLView::DrawPolygons(const SufScene& scene)
 {
-	if (!m_scene) return;
 
 	// prim.atrName が空文字列の場合でも最初のプリミティブで
 	// ApplyAttribute を必ず呼び出すため、初期値を空でない値にする
 	CString lastAtr = _T("\x01");
 	glEnable(GL_NORMALIZE);
-	glPolygonMode(GL_FRONT, GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	for (const auto& object : m_scene->Objects())
+	for (const auto& object : scene.Objects())
 	{
 		for (const auto& prim : object.primitives)
 		{
 			if (prim.points.size() < 3) continue;
 			if (prim.atrName.Compare(lastAtr) != 0)
 			{
-				ApplyAttribute(prim);
+				ApplyAttribute(scene, prim);
 				lastAtr = prim.atrName;
 			}
 
@@ -435,25 +407,24 @@ void CGLView::DrawPolygons()
 	}
 }
 
-void CGLView::DrawLines()
+void CGLView::DrawLines(const SufScene& scene)
 {
-	if (!m_scene) return;
 
 	CString lastAtr = _T("\x01");
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	for (const auto& object : m_scene->Objects())
+	for (const auto& object : scene.Objects())
 	{
 		for (const auto& prim : object.primitives)
 		{
 			if (prim.points.size() < 3) continue;
 			if (prim.atrName.Compare(lastAtr) != 0)
 			{
-				ApplyAttribute(prim);
+				ApplyAttribute(scene, prim);
 				lastAtr = prim.atrName;
 			}
 
-			glBegin(GL_LINE_STRIP);
+			glBegin(GL_LINE_LOOP);
 			for (const auto& point : prim.points)
 			{
 				if (point.values.size() < 3) continue;
@@ -464,34 +435,32 @@ void CGLView::DrawLines()
 	}
 }
 
-void CGLView::DrawPoints()
+void CGLView::DrawPoints(const SufScene& scene)
 {
-	if (!m_scene) return;
 
 	CString lastAtr = _T("\x01");
 	glPointSize(4.0f);
-	glBegin(GL_POINTS);
 
-	for (const auto& object : m_scene->Objects())
+	for (const auto& object : scene.Objects())
 	{
 		for (const auto& prim : object.primitives)
 		{
 			if (prim.points.size() < 3) continue;
 			if (prim.atrName.Compare(lastAtr) != 0)
 			{
-				ApplyAttribute(prim);
+				ApplyAttribute(scene, prim);
 				lastAtr = prim.atrName;
 			}
 
+			glBegin(GL_POINTS);
 			for (const auto& point : prim.points)
 			{
 				if (point.values.size() < 3) continue;
 				glVertex3f(point.values[0], point.values[1], point.values[2]);
 			}
+			glEnd();
 		}
 	}
-
-	glEnd();
 }
 
 std::array<float, 3> CGLView::PolygonNormal(const SufPrimitive& prim)
@@ -526,15 +495,6 @@ std::array<float, 3> CGLView::PolygonNormal(const SufPrimitive& prim)
 	return { nx, ny, nz };
 }
 
-LRESULT CGLView::WindowProc(UINT message, WPARAM wParam, LPARAM lParam)
-{
-    // ImGui にフォワード。ImGui が処理したらそこで終了する。
-    if (ImGui::GetCurrentContext() && ImGui_ImplWin32_WndProcHandler((HWND)m_hWnd, message, wParam, lParam))
-        return 0;
-
-    return CWnd::WindowProc(message, wParam, lParam);
-}
-
 void CGLView::DrawOverlay(HDC hdc)
 {
 	CRect rc;
@@ -543,65 +503,23 @@ void CGLView::DrawOverlay(HDC hdc)
 
 	size_t objects = 0;
 	size_t prims = 0;
-	if (m_scene)
-	{
-		objects = m_scene->Objects().size();
-		for (const auto& object : m_scene->Objects()) prims += object.primitives.size();
-	}
+    const auto countScene = [&](const SufScene& scene)
+    {
+        objects += scene.Objects().size();
+        for (const auto& object : scene.Objects()) prims += object.primitives.size();
+    };
+    if (m_assembly)
+    {
+        for (const auto& part : m_assembly->Parts())
+            if (part.scene) countScene(*part.scene);
+    }
+    else if (m_scene) countScene(*m_scene);
 	text.Format(_T("SUF | RMB Rotate | Shift+RMB Dolly | Wheel Zoom | 1 Poly 2 Line 3 Point 4 All | Objects: %zu | Prims: %zu"),
 		objects, prims);
 	::SetBkMode(hdc, TRANSPARENT);
 	::SetTextColor(hdc, RGB(230, 235, 240));
 	CRect textRc(12, 10, rc.Width() - 12, 32);
 	DrawText(hdc, text, -1, &textRc, DT_SINGLELINE | DT_LEFT | DT_VCENTER | DT_END_ELLIPSIS);
-}
-
-void CGLView::DrawImGui()
-{
-	if (!m_ready) return;
-
-	ImGui_ImplOpenGL3_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-
-	// Build a top-right child window showing parts
-	CRect rc;
-	GetClientRect(&rc);
-	const float padding = 8.0f;
-	const float winW = 280.0f;
-	const float winH = (rc.Height() / 2) - padding * 2;
-	ImGui::SetNextWindowPos(ImVec2((float)rc.right - winW - padding, padding), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(winW, winH), ImGuiCond_Always);
-
-	ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar;
-	if (ImGui::Begin("PartsPanel", nullptr, flags))
-	{
-		ImGui::Text("パーツ一覧");
-		ImGui::Separator();
-		ImGui::BeginChild("Parts", ImVec2(0, 0), true);
-		if (m_assembly)
-		{
-			for (int i = 0; i < static_cast<int>(m_assembly->Parts().size()); ++i)
-			{
-				const auto& p = m_assembly->Parts()[i];
-				bool selected = (i == m_selectedPart);
-				if (ImGui::Selectable(CT2A(p.name.GetString()), selected))
-				{
-					m_selectedPart = i;
-					// notify mainframe to sync listbox
-					if (::IsWindow(GetParent()->GetSafeHwnd()))
-					{
-						GetParent()->PostMessage(WM_IMGUI_SELECT, static_cast<WPARAM>(i), 0);
-					}
-				}
-			}
-		}
-		ImGui::EndChild();
-	}
-	ImGui::End();
-
-	ImGui::Render();
-	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 void CGLView::DrawGrid(float half, float step)
@@ -650,4 +568,22 @@ void CGLView::SetSelectedPart(int index)
 {
 	m_selectedPart = index;
 	Invalidate(FALSE);
+}
+void CGLView::DrawPart(const PartInstance& part)
+{
+    if (!part.scene) return;
+    constexpr auto zero = 0.0f, one = 1.0f;
+    glPushMatrix();
+    glTranslatef(part.move.x, part.move.y, part.move.z);
+    glRotatef(part.rotateDeg.z, zero, zero, one);
+    glRotatef(part.rotateDeg.y, zero, one, zero);
+    glRotatef(part.rotateDeg.x, one, zero, zero);
+    glScalef(part.scale.x, part.scale.y, part.scale.z);
+    // 鏡像になる拡大率の場合は、表面の頂点順も反転する。
+    glFrontFace(part.scale.x * part.scale.y * part.scale.z < zero ? GL_CW : GL_CCW);
+    if (m_drawPolygon && !m_wireframe) DrawPolygons(*part.scene);
+    if (m_drawLine || m_wireframe) DrawLines(*part.scene);
+    if (m_drawPoint) DrawPoints(*part.scene);
+    glFrontFace(GL_CCW);
+    glPopMatrix();
 }

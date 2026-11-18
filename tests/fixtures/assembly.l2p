@@ -1,0 +1,6 @@
+fram
+{
+{ mov ( 10 20 30 ) rotz ( 90 ) roty ( 0 ) rotx ( 0 )
+scal ( 2 3 1 ) obj triangle /* triangle.suf C19 NO M1 */
+}
+}

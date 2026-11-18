@@ -16,7 +16,7 @@ BOOL CGLPAsmApp::InitInstance()
     // ※ 取得した config.GetPartsFullPath() や config.GetAtrFullPath() を
     //    モデルの読み込み先フォルダの初期値としてお使いいただけます。
 
-    auto* frame = new CMainFrame();
+    auto* frame = new CMainFrame(config);
     if (!frame->Create(nullptr, _T("GL PartsAsm"), WS_OVERLAPPEDWINDOW,
         CRect(80, 80, 1280, 820)))
     {

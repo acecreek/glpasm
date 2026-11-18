@@ -1,6 +1,7 @@
 ﻿//#pragma once
 #include "pch.h"
 #include "SufModel.h"
+#include <filesystem>
 
 namespace
 {
@@ -347,8 +348,7 @@ SufBounds SufScene::Bounds() const
 
 std::string SufScene::ReadTextFile(const CString& path)
 {
-    CT2A ansiPath(path, CP_ACP);
-    std::ifstream file(ansiPath.m_psz, std::ios::binary);
+    std::ifstream file(std::filesystem::path(path.GetString()), std::ios::binary);
     if (!file) throw std::runtime_error("could not open file.");
     std::ostringstream buffer;
     buffer << file.rdbuf();
