@@ -25,9 +25,9 @@ public:
 	void SetDrawPolygon(bool enabled);
 	void SetDrawLine(bool enabled);
 	void SetDrawPoint(bool enabled);
-//	void DrawPolygons(const SufScene& scene);
-//	void DrawLines(const SufScene& scene);
-//	void DrawPoints(const SufScene& scene);
+//	void DrawPolygons(const SufScene& scene, const std::optional<SufAttribute>& material = std::nullopt);
+//	void DrawLines(const SufScene& scene, const std::optional<SufAttribute>& material = std::nullopt);
+//	void DrawPoints(const SufScene& scene, const std::optional<SufAttribute>& material = std::nullopt);
 	void ToggleGrid();
 	void ToggleAxes();
 	void ToggleWireframe();
@@ -61,10 +61,10 @@ private:
 	void RenderScene();
 	void ApplyCamera();
 //#ifndef __GLPASM__
-	void ApplyAttribute(const SufScene& scene, const SufPrimitive& prim);
-	void DrawPolygons(const SufScene& scene);
-	void DrawLines(const SufScene& scene);
-	void DrawPoints(const SufScene& scene);
+	void ApplyAttribute(const SufScene& scene, const SufPrimitive& prim, const std::optional<SufAttribute>& material);
+	void DrawPolygons(const SufScene& scene, const std::optional<SufAttribute>& material = std::nullopt);
+	void DrawLines(const SufScene& scene, const std::optional<SufAttribute>& material = std::nullopt);
+	void DrawPoints(const SufScene& scene, const std::optional<SufAttribute>& material = std::nullopt);
 //#endif
 	void DrawGrid(float half, float step);
 	void DrawAxes(float length);

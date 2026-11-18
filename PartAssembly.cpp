@@ -3,6 +3,7 @@
 #include "glsuf/SufModel.h"
 #include <filesystem>
 #include <numbers>
+#include "LxpMaterials.hpp"
 
 namespace
 {
@@ -100,11 +101,18 @@ bool PartAssembly::LoadLxP(const CString& path, CString& error)
         return false;
     }
 
+    std::ostringstream buffer;
+    buffer << file.rdbuf();
+    const auto text = buffer.str();
+    std::vector<SufAttribute> palette;
+    try { palette = lxp::Palette(text); }
+    catch (const std::exception& ex) { error = atr::Name(ex.what()); return false; }
+    std::istringstream input(text);
     PartInstance current;
     bool haveTransform = false;
     std::string line;
 
-    while (std::getline(file, line))
+    while (std::getline(input, line))
     {
         const std::string t = Trim(line);
         if (t.empty()) continue;
@@ -138,12 +146,43 @@ bool PartAssembly::LoadLxP(const CString& path, CString& error)
 
             current.name = ObjName(t);
             current.sufPath = SufPath(t);
+            try
+            {
+                constexpr auto attributeMarker = "atr";
+                constexpr auto next = 1;
+                const auto settings = lxp::Settings(t);
+                const auto marker = std::ranges::find(settings, attributeMarker);
+                if (marker != settings.end())
+                {
+                    if (std::distance(marker, settings.end()) <= next)
+                        throw std::runtime_error("パーツの材質名がありません。");
+                    current.materialName = atr::Name(*std::next(marker));
+                    const auto material = std::ranges::find_if(palette, [&](const auto& value)
+                    {
+                        return value.name == current.materialName;
+                    });
+                    if (material != palette.end()) current.material = *material;
+                }
+                else current.material = lxp::LegacyMaterial(settings, m_atrPath);
+            }
+            catch (const std::exception& ex) { error = atr::Name(ex.what()); return false; }
             if (current.name.IsEmpty())
             {
                 current.name.Format(_T("Part %zu"), m_parts.size() + 1);
             }
             const auto baseDirectory = std::filesystem::path(path.GetString()).parent_path();
             if (!LoadPart(current, CString(baseDirectory.c_str()), error)) return false;
+            if (!current.materialName.IsEmpty() && !current.material)
+            {
+                const auto material = current.scene->Material(current.materialName);
+                if (!material)
+                {
+                    constexpr auto missingMaterial = L"指定された材質が見つかりません: %s";
+                    error.Format(missingMaterial, current.materialName.GetString());
+                    return false;
+                }
+                current.material = *material;
+            }
             m_parts.push_back(current);
             haveTransform = false;
         }

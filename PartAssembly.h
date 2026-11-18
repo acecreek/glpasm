@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "glsuf/SufModel.h"
+#include <optional>
 
 class SufScene;
 struct SufBounds;
@@ -14,6 +16,8 @@ struct PartInstance
 {
     CString name;
     CString sufPath;
+    CString materialName;
+    std::optional<SufAttribute> material;
     std::shared_ptr<SufScene> scene;
     Vec3 move;
     Vec3 rotateDeg;

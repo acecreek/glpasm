@@ -314,9 +314,9 @@ void CGLView::ApplyCamera()
 	glTranslatef(-m_center[0], -m_center[1], -m_center[2]);
 }
 
-void CGLView::ApplyAttribute(const SufScene& scene, const SufPrimitive& prim)
+void CGLView::ApplyAttribute(const SufScene& scene, const SufPrimitive& prim, const std::optional<SufAttribute>& material)
 {
-	const SufAttribute* atr = scene.FindAttribute(prim.atrName);
+	const auto atr = material ? material : scene.Material(prim.atrName);
 	if (!atr)
 	{
 		constexpr std::array<GLfloat, 4> color{ 0.95f, 0.95f, 0.95f, 1.0f };
@@ -329,45 +329,31 @@ void CGLView::ApplyAttribute(const SufScene& scene, const SufPrimitive& prim)
 		return;
 	}
 
-	// DoGACGA の tra 値（0.0=不透明、1.0=透明）を OpenGL のアルファ値（0.0=透明、1.0=不透明）に変換
-	const float alpha = 1.0f - atr->tra;
-	GLfloat amb[] = {
-		atr->amb * atr->col[0],
-		atr->amb * atr->col[1],
-		atr->amb * atr->col[2],
-		alpha
-	};
-	GLfloat dif[] = {
-		atr->dif * atr->col[0],
-		atr->dif * atr->col[1],
-		atr->dif * atr->col[2],
-		alpha
-	};
-	GLfloat spc[] = {
-		atr->spc[0],
-		atr->spc[0],
-		atr->spc[0],
-		1.0f
-	};
-	const float emissionScale = (atr->amb == 1.0f) ? 1.0f : 0.0f;
-	GLfloat ems[] = {
-		emissionScale * atr->col[0],
-		emissionScale * atr->col[1],
-		emissionScale * atr->col[2],
-		alpha
-	};
-
-	glAlphaFunc(GL_LEQUAL, 1.0f);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_BLEND);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, amb);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, dif);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, spc);
-	glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, ems);
-	glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, 128.0f * atr->spc[1]);
+    // DoGACGA の tra 値（0.0=不透明、1.0=透明）を OpenGL のアルファ値（0.0=透明、1.0=不透明）に変換
+    constexpr auto zero = 0.0f, one = 1.0f, maximumShininess = 128.0f;
+    constexpr size_t red = 0, green = 1, blue = 2, strength = 0, gloss = 1, tint = 2;
+    const auto alpha = one - std::clamp(atr->tra, zero, one);
+    const std::array<GLfloat, 4> ambient{ atr->amb * atr->col[red], atr->amb * atr->col[green], atr->amb * atr->col[blue], alpha };
+    const std::array<GLfloat, 4> diffuse{ atr->dif * atr->col[red], atr->dif * atr->col[green], atr->dif * atr->col[blue], alpha };
+    const auto coloredSpecular = std::clamp(atr->spc[tint], zero, one);
+    const auto specularChannel = [&](size_t channel)
+    {
+        return atr->spc[strength] * (one - coloredSpecular + coloredSpecular * atr->col[channel]);
+    };
+    const std::array<GLfloat, 4> specular{ specularChannel(red), specularChannel(green), specularChannel(blue), one };
+    const auto emissionScale = atr->amb == one ? one : zero;
+    const std::array<GLfloat, 4> emission{ emissionScale * atr->col[red], emissionScale * atr->col[green], emissionScale * atr->col[blue], alpha };
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient.data());
+    glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse.data());
+    glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular.data());
+    glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, emission.data());
+    // OpenGLの許容範囲を超える光沢値でも、材質設定がエラーにならないようにする。
+    glMaterialf(GL_FRONT_AND_BACK, GL_SHININESS, std::clamp(maximumShininess * atr->spc[gloss], zero, maximumShininess));
 }
 
-void CGLView::DrawPolygons(const SufScene& scene)
+void CGLView::DrawPolygons(const SufScene& scene, const std::optional<SufAttribute>& material)
 {
 
 	// prim.atrName が空文字列の場合でも最初のプリミティブで
@@ -383,7 +369,7 @@ void CGLView::DrawPolygons(const SufScene& scene)
 			if (prim.points.size() < 3) continue;
 			if (prim.atrName.Compare(lastAtr) != 0)
 			{
-				ApplyAttribute(scene, prim);
+				ApplyAttribute(scene, prim, material);
 				lastAtr = prim.atrName;
 			}
 
@@ -407,7 +393,7 @@ void CGLView::DrawPolygons(const SufScene& scene)
 	}
 }
 
-void CGLView::DrawLines(const SufScene& scene)
+void CGLView::DrawLines(const SufScene& scene, const std::optional<SufAttribute>& material)
 {
 
 	CString lastAtr = _T("\x01");
@@ -420,7 +406,7 @@ void CGLView::DrawLines(const SufScene& scene)
 			if (prim.points.size() < 3) continue;
 			if (prim.atrName.Compare(lastAtr) != 0)
 			{
-				ApplyAttribute(scene, prim);
+				ApplyAttribute(scene, prim, material);
 				lastAtr = prim.atrName;
 			}
 
@@ -435,7 +421,7 @@ void CGLView::DrawLines(const SufScene& scene)
 	}
 }
 
-void CGLView::DrawPoints(const SufScene& scene)
+void CGLView::DrawPoints(const SufScene& scene, const std::optional<SufAttribute>& material)
 {
 
 	CString lastAtr = _T("\x01");
@@ -448,7 +434,7 @@ void CGLView::DrawPoints(const SufScene& scene)
 			if (prim.points.size() < 3) continue;
 			if (prim.atrName.Compare(lastAtr) != 0)
 			{
-				ApplyAttribute(scene, prim);
+				ApplyAttribute(scene, prim, material);
 				lastAtr = prim.atrName;
 			}
 
@@ -581,9 +567,9 @@ void CGLView::DrawPart(const PartInstance& part)
     glScalef(part.scale.x, part.scale.y, part.scale.z);
     // 鏡像になる拡大率の場合は、表面の頂点順も反転する。
     glFrontFace(part.scale.x * part.scale.y * part.scale.z < zero ? GL_CW : GL_CCW);
-    if (m_drawPolygon && !m_wireframe) DrawPolygons(*part.scene);
-    if (m_drawLine || m_wireframe) DrawLines(*part.scene);
-    if (m_drawPoint) DrawPoints(*part.scene);
+    if (m_drawPolygon && !m_wireframe) DrawPolygons(*part.scene, part.material);
+    if (m_drawLine || m_wireframe) DrawLines(*part.scene, part.material);
+    if (m_drawPoint) DrawPoints(*part.scene, part.material);
     glFrontFace(GL_CCW);
     glPopMatrix();
 }

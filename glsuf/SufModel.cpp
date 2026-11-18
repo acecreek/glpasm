@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "SufModel.h"
 #include <filesystem>
+#include "AtrParser.hpp"
 
 namespace
 {
@@ -180,113 +181,8 @@ bool SufScene::LoadAtr(const CString& path, CString& error)
 {
     try
     {
-        const std::string text = ReadTextFile(path);
-        std::istringstream input(text);
-        std::string line;
-        bool inBlockComment = false;
-        SufAttribute* currentAtr = nullptr;
-
-        ClearAtr();
-
-        while (std::getline(input, line))
-        {
-            auto tokens = TokenizeLine(line, inBlockComment);
-            if (tokens.empty()) continue;
-
-            const int atrIndex = FindToken(tokens, "atr");
-            if (atrIndex >= 0)
-            {
-                const int nameIndex = FindNextValueToken(tokens, static_cast<size_t>(atrIndex) + 1);
-                if (nameIndex >= 0)
-                {
-                    SufAttribute atr;
-                    atr.name = ToCString(tokens[static_cast<size_t>(nameIndex)]);
-                    m_attributes.push_back(atr);
-                    currentAtr = &m_attributes.back();
-                }
-                continue;
-            }
-
-            if (!currentAtr) continue;
-
-            if (FindToken(tokens, "colormap") >= 0) continue;
-            const int colIndex = FindToken(tokens, "col");
-            if (colIndex >= 0)
-            {
-                int out = 0;
-                for (size_t i = static_cast<size_t>(colIndex) + 1; i < tokens.size() && out < 3; ++i)
-                {
-                    if (EqualsI(tokens[i], "rgb") || IsBrace(tokens[i])) continue;
-                    // インデックスを事前に取得して範囲チェックしてから代入、後でインクリメント
-                    const size_t idx = static_cast<size_t>(out);
-                    if (idx < currentAtr->col.size()) {
-                        currentAtr->col[idx] = ParseFloat(tokens[i]);
-                    } else {
-                        // 必要ならエラー処理やログを追加
-                    }
-                    ++out;
-                }
-                continue;
-            }
-
-            const int ambIndex = FindToken(tokens, "amb");
-            if (ambIndex >= 0)
-            {
-                const int value = FindNextValueToken(tokens, static_cast<size_t>(ambIndex) + 1);
-                if (value >= 0) currentAtr->amb = ParseFloat(tokens[static_cast<size_t>(value)]);
-                continue;
-            }
-
-            const int difIndex = FindToken(tokens, "dif");
-            if (difIndex >= 0)
-            {
-                const int value = FindNextValueToken(tokens, static_cast<size_t>(difIndex) + 1);
-                if (value >= 0) currentAtr->dif = ParseFloat(tokens[static_cast<size_t>(value)]);
-                continue;
-            }
-
-            const int spcIndex = FindToken(tokens, "spc");
-            if (spcIndex >= 0)
-            {
-                int out = 0;
-                for (size_t i = static_cast<size_t>(spcIndex) + 1; i < tokens.size() && out < 3; ++i)
-                {
-                    if (IsBrace(tokens[i])) continue;
-                    // 範囲チェックを追加
-                    if (out >= 0 && out < static_cast<int>(currentAtr->spc.size())) {
-                        // out が負の可能性があるなら int/long 型を想定してチェック
-                        auto idxSigned = out++; // 元の増分意味を維持
-                        if (idxSigned >= 0) {
-                            size_t idx = static_cast<size_t>(idxSigned);
-                            if (idx < currentAtr->spc.size()) {
-                                currentAtr->spc[idx] = ParseFloat(tokens[i]);
-                            } else {
-                                 // 範囲外なら無視する（必要ならログや代替処理に変更）
-                            }
-                        } else {
-                            // 負なら無視（必要ならログ）
-                        }
-                        size_t idx = out++;
-                        if (idx < currentAtr->spc.size()) {
-                            currentAtr->spc[idx] = ParseFloat(tokens[i]);
-                        }
-                    } else {
-                        // 範囲外の場合の処理：無視する／ログ出力する／エラーにする 等
-                        // ここでは無視して次へ進む（必要ならエラーメッセージを設定してください）
-                    }
-                }
-                continue;
-            }
-
-            const int traIndex = FindToken(tokens, "tra");
-            if (traIndex >= 0)
-            {
-                const int value = FindNextValueToken(tokens, static_cast<size_t>(traIndex) + 1);
-                if (value >= 0) currentAtr->tra = ParseFloat(tokens[static_cast<size_t>(value)]);
-                continue;
-            }
-        }
-
+        auto attributes = atr::Parse(ReadTextFile(path));
+        m_attributes = std::move(attributes);
         m_atrPath = path;
         return true;
     }
@@ -313,6 +209,13 @@ const SufAttribute* SufScene::FindAttribute(const CString& name) const
         }
     }
     return nullptr; // 見つからなかった場合は nullptr を返す
+}
+
+std::optional<SufAttribute> SufScene::Material(const CString& name) const
+{
+    const auto found = std::ranges::find_if(m_attributes, [&](const auto& value) { return value.name == name; });
+    if (found == m_attributes.end()) return std::nullopt;
+    return *found;
 }
 
 SufBounds SufScene::Bounds() const
@@ -359,6 +262,8 @@ std::vector<std::string> SufScene::TokenizeLine(const std::string& line, bool& i
 {
     std::vector<std::string> tokens;
     std::string token;
+    bool inString = false;
+    constexpr auto quote = '"';
 
     auto flush = [&]()
     {
@@ -371,6 +276,13 @@ std::vector<std::string> SufScene::TokenizeLine(const std::string& line, bool& i
 
     for (size_t i = 0; i < line.size(); ++i)
     {
+        if (!inBlockComment && line[i] == quote)
+        {
+            inString = !inString;
+            token.push_back(line[i]);
+            continue;
+        }
+        if (inString) { token.push_back(line[i]); continue; }
         if (inBlockComment)
         {
             if (line[i] == '*' && i + 1 < line.size() && line[i + 1] == '/')
@@ -403,13 +315,18 @@ std::vector<std::string> SufScene::TokenizeLine(const std::string& line, bool& i
         }
         token.push_back(line[i]);
     }
+    if (inString) throw std::runtime_error("SUFの引用符が閉じられていません。");
     flush();
     return tokens;
 }
 
 CString SufScene::ToCString(const std::string& text)
 {
-    return CString(CA2T(text.c_str(), CP_ACP));
+    constexpr auto quote = '"';
+    constexpr size_t quotes = 2, first = 1;
+    const auto name = text.size() >= quotes && text.front() == quote && text.back() == quote
+        ? text.substr(first, text.size() - quotes) : text;
+    return CString(CA2T(name.c_str(), CP_ACP));
 }
 
 float SufScene::ParseFloat(const std::string& token)

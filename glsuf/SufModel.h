@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include <optional>
 
 enum class SufPrimType
 {
@@ -57,6 +58,7 @@ public:
     const std::vector<SufAttribute>& Attributes() const { return m_attributes; }
     const SufAttribute* FindAttribute(const CString& name) const;
     SufBounds Bounds() const;
+    std::optional<SufAttribute> Material(const CString& name) const;
     CString SourcePath() const { return m_sourcePath; }
     CString AtrPath() const { return m_atrPath; }
 

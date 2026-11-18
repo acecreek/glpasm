@@ -1,0 +1,8 @@
+atr BodyM { col ( rgb ( 0.1 0.2 0.3 ) ) amb ( 0.2 ) dif ( 0.8 ) spc ( 0.11 0.22 0.33 ) tra ( 0.4 ) }
+ATR "White material"
+{
+COL ( 1 )
+amb ( 1 )
+dif ( 0 )
+spc ( 0 0 0 )
+}

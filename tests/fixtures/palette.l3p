@@ -1,0 +1,16 @@
+/*
+Palette:
+0: atr "Green material" { col ( rgb ( 0.2 0.69 0.85 ) ) amb ( 0.5 ) dif ( 0.5 ) spc ( 0.11 0.22 0.33 ) colormap ( "path with spaces.png" 0.5 1 ) opt ( shader 3 ( 1 2 3 ) ) }
+1: atr "Black material" { col ( 0 ) amb ( 0.2 ) dif ( 0.8 ) tra ( 0.25 ) spc ( 0.4 0.5 0.6 ) }
+*/
+fram {
+{ mov ( 0 0 0 ) rotz ( 0 ) roty ( 0 ) rotx ( 0 )
+scal ( 1 1 1 ) obj first /* "triangle.suf" atr "Green material" */
+}
+{ mov ( 200 0 0 ) rotz ( 0 ) roty ( 0 ) rotx ( 0 )
+scal ( 1 1 1 ) obj second /* "triangle.suf" atr "Black material" */
+}
+{ mov ( -200 0 0 ) rotz ( 0 ) roty ( 0 ) rotx ( 0 )
+scal ( 1 1 1 ) obj third /* "triangle.suf" */
+}
+}

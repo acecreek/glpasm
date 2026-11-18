@@ -1,3 +1,4 @@
 obj suf triangle {
+atr "BodyM"
 prim poly ( 0 0 0 100 0 0 0 100 0 )
 }
