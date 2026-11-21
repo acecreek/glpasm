@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "MainFrame.h"
 #include "resource.h"
+#include "WindowSettings.hpp"
 #include <cerrno>
 #include <limits>
 
@@ -17,6 +18,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CFrameWnd)
     ON_MESSAGE(NumericGestureFinished, &CMainFrame::OnNumericGestureFinished)
     ON_WM_CREATE()
     ON_WM_SIZE()
+    ON_WM_CLOSE()
     ON_COMMAND(ID_FILE_OPEN_LXP, &CMainFrame::OnFileOpen)
     ON_COMMAND(ID_FILE_EXIT, &CMainFrame::OnFileExit)
     ON_COMMAND(ID_VIEW_GRID, &CMainFrame::OnViewGrid)
@@ -114,6 +116,13 @@ void CMainFrame::OnFileOpen()
     SetStatusText(status);
 
     OnPartSelectionChanged();
+}
+
+void CMainFrame::OnClose()
+{
+    constexpr auto saveError = L"ウィンドウのサイズと位置をiniファイルに保存できませんでした。書き込み権限を確認してください。";
+    if (!WindowSettings::Save(*this)) AfxMessageBox(saveError, MB_ICONWARNING);
+    CFrameWnd::OnClose();
 }
 
 void CMainFrame::OnFileExit()

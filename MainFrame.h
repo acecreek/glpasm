@@ -16,6 +16,7 @@ protected:
     afx_msg void OnSize(UINT type, int cx, int cy);
     afx_msg void OnFileOpen();
     afx_msg void OnFileExit();
+    afx_msg void OnClose();
     afx_msg void OnViewGrid();
     afx_msg void OnViewAxes();
     afx_msg void OnViewWireframe()

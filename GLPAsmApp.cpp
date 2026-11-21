@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "GLPAsmApp.h"
 #include "MainFrame.h"
+#include "WindowSettings.hpp"
 #include "AppInit/AppInit.h"
 
 CGLPAsmApp theApp;
@@ -25,7 +26,7 @@ BOOL CGLPAsmApp::InitInstance()
     }
 
     m_pMainWnd = frame;
-    frame->ShowWindow(SW_SHOW);
+    frame->ShowWindow(WindowSettings::Restore(*frame));
     frame->UpdateWindow();
     return TRUE;
 }
