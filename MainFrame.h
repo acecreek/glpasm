@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "glsuf/GLView.hpp"
 #include "PartAssembly.h"
+#include "AssemblyHistory.hpp"
 #include "NumericEdit.h"
 #include "AppInit/AppInit.h"
 
@@ -8,6 +9,7 @@ class CMainFrame : public CFrameWnd
 {
 public:
     explicit CMainFrame(const AppConfig& config);
+    BOOL PreTranslateMessage(MSG* message) override;
 
 protected:
     afx_msg int OnCreate(LPCREATESTRUCT cs);
@@ -26,6 +28,13 @@ protected:
     afx_msg void OnPartsAdd();
     afx_msg void OnPartsAddFromFile();
     afx_msg void OnSelectedValueChanged(UINT id);
+    afx_msg void OnDuplicatePart();
+    afx_msg void OnDeletePart();
+    afx_msg void OnUndo();
+    afx_msg void OnRedo();
+    afx_msg void OnUpdateEditCommand(CCmdUI* command);
+    afx_msg void OnNumericFocusLost(UINT id);
+    afx_msg LRESULT OnNumericGestureFinished(WPARAM, LPARAM);
     DECLARE_MESSAGE_MAP()
 
 private:
@@ -34,6 +43,11 @@ private:
     void RefreshPartList();
     void SetStatusText(const CString& text);
 
+    void RecordEdit();
+    void RestoreEdit(AssemblyHistory::State state);
+    bool HasSelectedPart() const;
+    AssemblyHistory m_history;
+    bool m_numericEditing = false;
     AppConfig m_config;
     bool m_updatingSelection = false;
     CGLView m_view;

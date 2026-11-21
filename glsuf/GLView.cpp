@@ -215,6 +215,8 @@ bool CGLView::InitGL()
 	pfd.iPixelType = PFD_TYPE_RGBA;
 	pfd.cColorBits = 32;
 	pfd.cDepthBits = 24;
+    constexpr BYTE stencilBits = 8;
+    pfd.cStencilBits = stencilBits;
 	pfd.iLayerType = PFD_MAIN_PLANE;
 
 	const int format = ChoosePixelFormat(m_hDC, &pfd);
@@ -292,6 +294,9 @@ void CGLView::RenderScene()
     if (m_assembly)
     {
         for (const auto& part : m_assembly->Parts()) DrawPart(part);
+        constexpr auto firstPart = 0;
+        if (m_selectedPart >= firstPart && static_cast<size_t>(m_selectedPart) < m_assembly->Parts().size())
+            DrawSelectionOutline(m_assembly->Parts().at(m_selectedPart));
     }
     else if (m_scene)
     {
@@ -572,4 +577,74 @@ void CGLView::DrawPart(const PartInstance& part)
     if (m_drawPoint) DrawPoints(*part.scene, part.material);
     glFrontFace(GL_CCW);
     glPopMatrix();
+}
+
+// 材質を変更せず、選択形状のシルエット用に面だけを描く。
+void CGLView::DrawSelectionGeometry(const PartInstance& part)
+{
+    if (!part.scene) return;
+    constexpr auto zero = 0.0f, one = 1.0f;
+    constexpr size_t coordinates = 3, x = 0, y = 1, z = 2;
+    glPushMatrix();
+    glTranslatef(part.move.x, part.move.y, part.move.z);
+    glRotatef(part.rotateDeg.z, zero, zero, one);
+    glRotatef(part.rotateDeg.y, zero, one, zero);
+    glRotatef(part.rotateDeg.x, one, zero, zero);
+    glScalef(part.scale.x, part.scale.y, part.scale.z);
+    for (const auto& object : part.scene->Objects())
+        for (const auto& primitive : object.primitives)
+        {
+            if (primitive.points.size() < coordinates) continue;
+            glBegin(GL_POLYGON);
+            for (const auto& point : primitive.points)
+                if (point.values.size() >= coordinates)
+                    glVertex3f(point.values[x], point.values[y], point.values[z]);
+            glEnd();
+        }
+    glPopMatrix();
+}
+
+void CGLView::DrawSelectionOutline(const PartInstance& part)
+{
+    if (!part.scene) return;
+    constexpr auto zero = 0, mask = 1;
+    constexpr GLuint stencilMask = 0xff;
+    constexpr auto red = 1.0f, green = 0.5f, blue = 0.0f;
+    constexpr auto radius = 2;
+    constexpr size_t viewportSize = 4, x = 0, y = 1, width = 2, height = 3;
+    constexpr std::array offsets = {std::array{-radius, zero}, std::array{radius, zero},
+        std::array{zero, -radius}, std::array{zero, radius}, std::array{-radius, -radius},
+        std::array{radius, -radius}, std::array{-radius, radius}, std::array{radius, radius}};
+    std::array<GLint, viewportSize> viewport{};
+    glGetIntegerv(GL_VIEWPORT, viewport.data());
+    glPushAttrib(GL_ALL_ATTRIB_BITS);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDepthMask(GL_FALSE);
+    glEnable(GL_STENCIL_TEST);
+    glStencilMask(stencilMask);
+    glClearStencil(zero);
+    glClear(GL_STENCIL_BUFFER_BIT);
+    // 元のシルエットを印にし、内部の面境界には線を描かない。
+    glDisable(GL_DEPTH_TEST);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    glStencilFunc(GL_ALWAYS, mask, stencilMask);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    DrawSelectionGeometry(part);
+    // 画面上で少しずつずらした形状のうち、シルエットの外側だけを着色する。
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LEQUAL);
+    glStencilMask(zero);
+    glStencilFunc(GL_NOTEQUAL, mask, stencilMask);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    glColor3f(red, green, blue);
+    for (const auto& offset : offsets)
+    {
+        glViewport(viewport[x] + offset[x], viewport[y] + offset[y], viewport[width], viewport[height]);
+        DrawSelectionGeometry(part);
+    }
+    glPopAttrib();
 }

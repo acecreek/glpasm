@@ -69,6 +69,8 @@ private:
 	void DrawGrid(float half, float step);
 	void DrawAxes(float length);
 	void DrawPart(const PartInstance& part);
+    void DrawSelectionOutline(const PartInstance& part);
+    void DrawSelectionGeometry(const PartInstance& part);
 	void DrawUnitBox(bool selected);
 	void DrawOverlay(HDC hdc);
 //#ifndef __GLPASM__

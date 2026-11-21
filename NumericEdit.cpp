@@ -1,4 +1,4 @@
-#include "pch.h"
+﻿#include "pch.h"
 #include "NumericEdit.h"
 
 BEGIN_MESSAGE_MAP(CNumericEdit, CEdit)
@@ -8,6 +8,7 @@ BEGIN_MESSAGE_MAP(CNumericEdit, CEdit)
 	ON_WM_KEYDOWN()
 	ON_WM_KEYUP()
 	ON_WM_TIMER()
+    ON_WM_KILLFOCUS()
 END_MESSAGE_MAP()
 
 CNumericEdit::CNumericEdit() {}
@@ -26,6 +27,9 @@ void CNumericEdit::OnLButtonDown(UINT nFlags, CPoint point)
 	SetCapture();
 	m_dragging = true;
 	m_startX = point.x;
+    CString text;
+    GetWindowText(text);
+    m_value = _wtof(text);
 	m_startValue = m_value;
 	CEdit::OnLButtonDown(nFlags, point);
 }
@@ -34,6 +38,7 @@ void CNumericEdit::OnLButtonUp(UINT nFlags, CPoint point)
 {
 	if (GetCapture() == this) ReleaseCapture();
 	m_dragging = false;
+    GetParent()->SendMessage(NumericGestureFinished);
 	CEdit::OnLButtonUp(nFlags, point);
 }
 
@@ -72,6 +77,7 @@ void CNumericEdit::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
 	if ((nChar == VK_LEFT && m_keyDir == -1) || (nChar == VK_RIGHT && m_keyDir == 1))
 	{
 		StopKeyRepeat();
+        GetParent()->SendMessage(NumericGestureFinished);
 	}
 	else
 	{
@@ -81,6 +87,10 @@ void CNumericEdit::OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags)
 
 void CNumericEdit::StartKeyRepeat(int dir)
 {
+    if (m_keyDir == dir) return;
+    CString text;
+    GetWindowText(text);
+    m_value = _wtof(text);
 	m_keyDir = dir;
 	// immediate step
 	m_value += m_keyDir * m_sensitivity;
@@ -109,4 +119,14 @@ void CNumericEdit::OnTimer(UINT_PTR nIDEvent)
 		GetParent()->SendMessage(WM_COMMAND, MAKEWPARAM(GetDlgCtrlID(), EN_CHANGE), reinterpret_cast<LPARAM>(m_hWnd));
 	}
 	CEdit::OnTimer(nIDEvent);
+}
+
+void CNumericEdit::OnKillFocus(CWnd* newWindow)
+{
+    // 別の欄やパーツへ移った後に、押しっぱなしの処理が残るのを防ぐ。
+    StopKeyRepeat();
+    m_dragging = false;
+    if (GetCapture() == this) ReleaseCapture();
+    GetParent()->SendMessage(NumericGestureFinished);
+    CEdit::OnKillFocus(newWindow);
 }

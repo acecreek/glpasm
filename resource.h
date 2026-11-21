@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #define ID_FILE_OPEN_LXP      40001
 #define ID_FILE_EXIT          40002
@@ -30,3 +30,9 @@
 #define IDC_PART_SCL_X 51007
 #define IDC_PART_SCL_Y 51008
 #define IDC_PART_SCL_Z 51009
+
+// パーツ編集コマンド
+constexpr UINT ID_PART_DUPLICATE = 40030;
+constexpr UINT ID_PART_DELETE = 40031;
+constexpr UINT ID_ASSEMBLY_UNDO = 40032;
+constexpr UINT ID_ASSEMBLY_REDO = 40033;

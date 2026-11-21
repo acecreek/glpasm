@@ -116,6 +116,7 @@
     <ClInclude Include="GLPAsmApp.h" />
     <ClInclude Include="glsuf\GLView.hpp" />
     <ClInclude Include="MainFrame.h" />
+    <ClInclude Include="AssemblyHistory.hpp" />
     <ClInclude Include="NumericEdit.h" />
     <ClInclude Include="PartAssembly.h" />
     <ClInclude Include="pch.h" />

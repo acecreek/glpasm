@@ -1,6 +1,8 @@
-#pragma once
+﻿#pragma once
 
 #include <afxwin.h>
+
+inline constexpr UINT NumericGestureFinished = WM_APP + 41;
 
 class CNumericEdit : public CEdit
 {
@@ -19,6 +21,7 @@ protected:
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
+    afx_msg void OnKillFocus(CWnd* newWindow);
 	DECLARE_MESSAGE_MAP()
 
 private:
